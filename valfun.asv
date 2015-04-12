@@ -70,11 +70,10 @@ else        %bottle contains water
     dL_1 = - v_1;
     %change in flow 
     %                                           major head loss in bottle
-    
-    dv_1 = ((P_1)+rho_h2o/2*(v_1^2-v_2^2) - rho_h2o*f_d_1*L_1/D_b*(v_1^2)/2 - rho_h2o*f_d_2*L_2/D_n*(v_2^2)/2 - rho_h2o*K_minor*(v_2^2)/2 ) / (rho_h2o*L_1 + rho_h2o*A_b/A_n*L_2);
     if(lin > L_a && lin < L_a + 0.05)
-       dv_1 = 0;
+    v_1 = v_1;
     end
+    dv_1 = ((P_1)+rho_h2o/2*(v_1^2-v_2^2) - rho_h2o*f_d_1*L_1/D_b*(v_1^2)/2 - rho_h2o*f_d_2*L_2/D_n*(v_2^2)/2 - rho_h2o*K_minor*(v_2^2)/2 ) / (rho_h2o*L_1 + rho_h2o*A_b/A_n*L_2);
 end
 
 if (lin < L_s)%still on seal

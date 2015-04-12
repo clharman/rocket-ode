@@ -1,26 +1,25 @@
-%have to change L_0 as well as IC L
-
 psi = 30;
-IC = [0, 0.069, 0, 0, 0, 0, psi*6894];
+IC = [0, 0.075, 0, 0, 0, 0, psi*6894];
 m_r = 0.06478;
 phi_fin = 9.6;
 D_b = 0.0592;
-J = 0.000000008;
+J = 0.00000008;
 
-%pressure drop when leaving sting
 options = odeset('Events',@eventLA);
-[t1,y1] = ode45(@modelfun,[0, 6], IC,options);
-y1(end,7) = y1(end,7) * 0.95;
-y1(end,1) = y1(end,1) * 0.5;
+[t1,y1] = ode45(@modelfun,[0, 30], IC,options);
+y1(end,7) = y1(end,7) * 0.9;
 
-%convert linear to angular energy when water is gone
+
 options = odeset('Events',@eventL1);
 [t2,y2] = ode45(@modelfun,[t1(end), t1(end)+30], y1(end,:), options);
 v2_0 = sqrt(y2(end,3)^2 + y2(end,4)^2);
 theta = atan(y2(end,4)/y2(end,3));
+
 v2_1 = sqrt(m_r * (v2_0^2) / (m_r + J/ (0.5*D_b*tand(phi_fin))^2 ));
-%y2(end,3) = v2_1 * cos(theta);
-%y2(end,4) = v2_1 * sin(theta);
+%y2(end,3) = sign(y2(end,3))*sqrt(m_r * abs(y2(end,3))^2 / (m_r + J/ (0.5*D_b*tand(phi_fin))^2 ));
+%y2(end,4) = sign(y2(end,4))*sqrt(m_r * abs(y2(end,4))^2 / (m_r + J/ (0.5*D_b*tand(phi_fin))^2 ));
+y2(end,3) = v2_1 * cos(theta);
+y2(end,4) = v2_1 * sin(theta);
 
 options = odeset('Events',@eventZ0);
 [t3,y3] = ode45(@modelfun,[t2(end), t2(end)+30], y2(end,:), options);

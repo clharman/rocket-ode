@@ -1,3 +1,4 @@
+%have to change L_0 as well as IC L
 IC = [0, 0.0793, 0, 0, 0, 0, 689500];
 options = odeset('Events',@eventLA);
 [t1,y1] = ode45(@valfun,[0, 0.05], IC, options);
