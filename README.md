@@ -4,13 +4,13 @@ Simulation of water bottle rocket physics as ODEs
 I created this model for the final portion of ME495 W15.
 
 The following files are contained here:
-* odel_sim.m			*calls main simulation function modelfun. Requires eventLA.m and eventZ0.m*
-* modelfun.m			*main function for simulation*
-* launch_val.m			*calls launch validation function valfun. Requires eventLA.m and eventZ0.m*
-* valfun.m				*main function for launch validation*
-* simplefun.m			*simplified version of modelfun.m*
-* eventLA.m	event 		*event function for rocket leaving the sting*
-* eventZ0.m	event 		*event function for rocket hitting the ground*
+* odel_sim.m............*calls main simulation function modelfun. Requires eventLA.m and eventZ0.m*
+* modelfun.m............*main function for simulation*
+* launch_val.m..........*calls launch validation function valfun. Requires eventLA.m and eventZ0.m*
+* valfun.m..............*main function for launch validation*
+* simplefun.m...........*simplified version of modelfun.m*
+* eventLA.m	event.......*event function for rocket leaving the sting*
+* eventZ0.m	event.......*event function for rocket hitting the ground*
 
 Instructions to run a simulation:
 1. Put model_sim.m, modelfun.m, eventLA.m, and eventZ0.m in the same folder (replace modelfun.m with simplefun.m if desired)
