@@ -1,9 +1,17 @@
-IC = [0, 0.0793, 0, 0, 0, 0, 689500];
+psi = 100;
+L_0 = 0.0793;
+theta_0 = 32;
+D_b = 0.0762;       %m, diameter of bottle
+A_b = pi*D_b^2/4;   %cm^2, area of bottle
+L_b = 0.2;          %m, length of bottle
+V_0 = A_b*(L_b-L_0);
+IC = [0, L_0, 0, 0, 0, 0, psi*6894, theta_0*pi/180, V_0, 0, 0, 0];
+
 options = odeset('Events',@eventLA);
 [t1,y1] = ode45(@valfun,[0, 0.05], IC, options);
-y1(end,7) = y1(end,7) * 1;
-y1(end,1) = y1(end,1) * 1;
-[t2,y2] = ode45(@valfun,[t1(end), 0.05], y1(end,:), options);
+y1(end,7) = y1(end,7) * 0.95;
+%y1(end,1) = y1(end,1) * 0.1;
+[t2,y2] = ode45(@valfun,[t1(end), 0.04], y1(end,:), options);
 
 y = cat(1, y1, y2);
 t = cat(1, t1, t2);
@@ -29,12 +37,25 @@ end
 linear_pos = sqrt(y(:,5).^2 + y(:,6).^2);
 linear_vel = sqrt(y(:,3).^2 + y(:,4).^2);
 
-%figure(1); plot(t,linear_pos); hold on; title('position'); plot(sampleT,sampleX, '*r');
+%figure(7); plot(t,linear_pos); hold on; title('position'); plot(sampleT,sampleX, '*r');
 
-%figure(2); plot(t,linear_vel); hold on; title('velocity'); plot(sampleT(1:end-1),sampleV, '*r');
+%figure(6); plot(t,linear_vel); hold on; title('velocity'); plot(sampleT(1:end-1),sampleV, '*r');
 
 %figure(3); plot(t,y(:,6)); title('height');
 
-figure(4); plot(t,y(:,1)); title('flow rate');
+%figure(4); plot(t,y(:,1)); title('flow rate');
 
-figure(5); plot(linear_pos,linear_vel); hold on; plot(sampleX(1:end-1),sampleV, '*r'); title('velocity vs position');
+%figure(5); plot(linear_pos,linear_vel); hold on; plot(sampleX(1:end-1),sampleV, '*r'); title('velocity vs position');
+
+
+figure(1);
+subplot(1,2,2)
+plot(t,linear_vel, sampleT(1:end-1),sampleV, '*r');
+ylabel('rocket speed, m/s')
+xlabel('time, s')
+
+subplot(1,2,1)
+plot(t,linear_pos, sampleT(1:end),sampleX, '*r');
+xlim([0 0.04])
+ylabel('distance traveled, m')
+xlabel('time, s')

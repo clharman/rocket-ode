@@ -1,103 +1,148 @@
-function dq = fcn1(t, q)
+ function dq = modelfun(t, q) %This function contains differential 
+ %  equations that describe the behavior of a water bottle rocket.
+ %Created for MECHENG 495 W14 Lab 4 by:
+ %  Section 003 Team 4: Colin Harman, Brian Freeburg, Joe Hendrickson
+ %Written by Colin Harman with guidance from GSI Colin Jiang, 4/21/2015
+ 
+%--------------------------------------------------------------------------
+%-------------CONSTANTS----------------------------------------------------
+%Rocket dimensions
+L_b = 0.196;                %m, length of bottle
+L_2 = 0.0203;               %m, length of nozzle
+D_b = 0.0592;               %m, diameter of bottle
+D_n = 0.0218;               %m, diameter of nozzle
+A_b = pi*D_b^2/4;           %m^2, area of bottle (calculated from D_b)
+A_n0 = pi*D_n^2/4;          %m^2, area of nozzle (calculated from D_n)
+A_fin = 0.0023;             %m^2, area of each fin
 
-D_b = 0.0592;       %m, diameter of bottle
-D_n = 0.0218;       %m, diameter of nozzle
-D_a = 0.0103;       %m, diameter of air sting
-L_a = 0.197;        %m, length of air sting
-L_s = 0.057;        %m, length of seal
-A_b = pi*D_b^2/4;   %cm^2, area of bottle
-A_n0 = pi*D_n^2/4;  %cm^2, area of nozzle
-L_b = 0.196;        %m, length of bottle
-L_0 = 0.069;         %m, initial height of water
-L_2 = 0.0203;       %m, length of nozzle
+%Other rocket characteristics
+m_r = 0.06478;              %kg, mass of rocket without water
+aoa_fin = 9.6*pi/180;       %rad, angle of attack of fins
+n_fins = 3;                 %number of fins
+Cd_lock = 0.28;             %-, drag coefficient of rocket when still
+Cd_spin = 0.21;             %-, drag coefficient of rocket when spinning
+Cd_y = 1.17;                %-, drag coefficient for side of rocket
+I_r = 0.000027;             %kg m^2, moment of inertia of empty rocket about long axis
+K_minor = 0*0.05;             %-, resistance coefficient of bottle-nozzle contraction
 
-rho_h2o = 1000;     %kg/m^3, density of water
-rho_air = 1.225;    %kg/m^3, density of air (uncompressed)
-m_r = 0.06478;         %kg, mass of rocket without water
-theta_0 = 30;         %degrees, launch angle from ground
-g = 9.807;            %m/s^2, acceleration due to gravity
-Cd_lock = 0.35;       %, drag coefficient of rocket when still
-Cd_spin = 0.2;       %, drag coefficient of rocket when spinning
+%Launcher dimensions
+D_a = 0.0103;               %m, diameter of air sting                       
+L_a = 0.209;                %m, length of air sting
+L_s = 0.057;                %m, length of seal
+A_s = pi*D_a^2/4;           %cm^2, area of air sting (calculated from D_a)
 
-mu = 0.00089;       %Pa s, dynamic viscosity of water at 25 C
-%eps_pl = 0.0000025; %mm, roughness of plastic
-%rpr_1 = eps_pl/D_b; %-, relative pipe roughness, bottle
-%rpr_2 = eps_pl/D_n; %-, relative pipe roughness, nozzle
-K_minor = 0*0.08;    %-, resistance coefficient of bottle-nozzle contraction
-phi_fin = 9.6;      %degrees, angle of fins
+%Physical constants
+rho_h2o = 997;             %kg/m^3, density of water
+rho_air = 1.225;            %kg/m^3, density of air (uncompressed)
+g = 9.807;                  %m/s^2, acceleration due to gravity
+mu = 0.00089;               %Pa s, dynamic viscosity of water at 25 C
+%eps_pl = 0.0000025;        %mm, roughness of plastic
+%rpr_1 = eps_pl/D_b;        %-, relative pipe roughness, bottle
+%rpr_2 = eps_pl/D_n;        %-, relative pipe roughness, nozzle
 
-v_1 = q(1); %velocity of flow in the bottle
-L_1 = q(2); %height of water in the bottle
-vrx = q(3); %velocity of rocket in x
-vrz = q(4); %velocity of rocket in z
-x = q(5);   %rocket position in x
-z = q(6);   %rocket position in z
-P_0 = q(7); %initial gage pressure in pa
+%Environmental variables
+vy_wind = 0;                %m/s, wind speed in the y direction (2.23 m/s = 5 mph)
+vx_wind = 0;                %m/s, wind speed in the x direction
 
-V_0 = A_b*(L_b-L_0);%m^3, initial volume of air
+%--------------------------------------------------------------------------
+%-------------STATE VARIABLES----------------------------------------------
+v_1 = q(1);                 %velocity of flow in the bottle
+L_1 = q(2);                 %height of water in the bottle
+vrx = q(3);                 %velocity of rocket in x
+vrz = q(4);                 %velocity of rocket in z
+x = q(5);                   %rocket position in x
+z = q(6);                   %rocket position in z
+P_0 = q(7);                 %initial gage pressure in pa (so that a pressure drop can be affected externally)
+theta = q(8);               %pointing angle of the rocket in radians
+V_0 = q(9);                 %initial volume of air (so that it does not need to be changed inside the function)
+omega = q(10);              %spin speed of the rocket in rad/s
+vry = q(11);                %velocity of rocket in y
+y = q(12);                  %rocket position in y
 
 
-    
-%change from still to spinning drag coefficient
-if(L_1 > 0)    
-    Cd = Cd_lock;
+%--------------------------------------------------------------------------
+%-------------CONSTANT ALGEBRAIC EXPRESSIONS-(never change)----------------
+lin = sqrt(x^2+z^2);        %magnitude of distance from launch point
+vlin = sqrt(vrx^2+vrz^2);   %magnitude of x-z velocity
+V = (L_b-L_1)*A_b;          %air volume
+P = P_0*V_0^1.4/V^1.4;      %air pressure
+asx = vrx - vx_wind;        %airspeed in x direction
+asy = vry - vy_wind;        %airspeed in y direction
+aslin = sqrt(asx^2+vrz^2);  %magnitude of x-z windspeed
+
+
+%--------------------------------------------------------------------------
+%-------------LAUNCH CONDITIONS--------------------------------------------
+if lin < L_s                %rocket is on the launcher seal
+    on_seal = true;         %   switch
 else
-    Cd = Cd_spin;
+    on_seal = false;
 end
 
-lin = sqrt(x^2+z^2);    %linear distance traveled
-vlin = sqrt(vrx^2+vrz^2);
-
-if lin < L_a
-    A_n = A_n0 - pi* D_a^2 / 4;
+if lin < L_a                %rocket is on the air sting
+    A_n = A_n0-A_s;         %   effective nozzle area is smaller
 else
     A_n = A_n0;
 end
 
+if(L_1 <= 0)                %all fuel is gone
+    empty = true;           %   switch
+else
+    empty = false;
+end
+
+
+%--------------------------------------------------------------------------
+%-------------VARIABLE ALGEBRAIC EXPRESSIONS-(depend on launch conditions)-
+%Constant flow rate
 v_2 = A_b/A_n * v_1;
-P_1 =  (q(7))* (V_0^1.4) / ((L_b-L_1) * A_b)^1.4;
 
 Re_1 = rho_h2o*v_1*D_b/mu;
 Re_2 = rho_h2o*v_2*D_n/mu;
 f_d_1 = 0*64/Re_1;
 f_d_2 = 0*64/Re_2;
 
-if(L_1 <= 0) %bottle is ~empty
+%Spin equations
+phi_fin = aoa_fin - atan(omega*D_b/2/vlin);
+Cl = 2*pi*phi_fin;
+omega_ss = 2*vlin*tan(aoa_fin)/D_b;
+Cd = Cd_lock - omega/omega_ss*(Cd_lock-Cd_spin);
+
+
+%--------------------------------------------------------------------------
+%-------------DERIVATIVE DEFINITIONS---------------------------------------
+if empty
     dv_1 = 0;
     dL_1 = 0;
     L_2 = 0;
     v_2 = 0;
-else        %bottle contains water
-    %change in height of water
-    dL_1 = - v_1;
-    %change in flow 
-    %                                           major head loss in bottle
-    dv_1 = ((P_1)+rho_h2o/2*(v_1^2-v_2^2) - rho_h2o*f_d_1*L_1/D_b*(v_1^2)/2 - rho_h2o*f_d_2*L_2/D_n*(v_2^2)/2 - rho_h2o*K_minor*(v_2^2)/2 ) / (rho_h2o*L_1 + rho_h2o*A_b/A_n*L_2);
+    domega = n_fins*D_b/2*0.5*rho_air*vlin^2*A_fin*Cl/I_r;
+else
+    dL_1 = -v_1; 
+    dv_1 = ((P)+rho_h2o/2*v_1^2*(1-(A_b/A_n)^2) - rho_h2o*f_d_1*L_1/D_b*(v_1^2)/2 - rho_h2o*f_d_2*L_2/D_n*(v_2^2)/2 - rho_h2o*K_minor*(v_2^2)/2 ) / (rho_h2o*L_1 + rho_h2o*A_b/A_n*L_2);
+    domega = 0;
 end
 
-if (lin < L_s)%still on seal
-    theta = theta_0;
-    dvrx = cosd(theta)*(P_1) * A_n0 / (m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
-    dvrz = sind(theta)*(P_1) * A_n0 / (m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
+if on_seal
+    dtheta = 0;
+    dvrx = cos(theta)*P*A_n0 / (m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
+    dvrz = sin(theta)*P*A_n0 / (m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
     dv_1 = A_n / A_b * sqrt(dvrx^2 + dvrz^2);
-else   %off of seal
-    theta = atand(vrz/vrx);
+    dvry = 0;
+else
     dv2 = A_b/A_n * dv_1;
-    dvrx = (cosd(theta)*-rho_h2o*A_b*(dL_1*(vlin-v_1)-L_1*dv_1) + cosd(theta)*rho_h2o*A_n*L_2*dv2 - cosd(theta)*rho_h2o*v_2*A_n*(vlin-v_2) - cosd(theta)*(Cd/2)*rho_air*A_b*vlin*abs(vlin))/(m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
-    dvrz = (sind(theta)*-rho_h2o*A_b*(dL_1*(vlin-v_1)-L_1*dv_1) + sind(theta)*rho_h2o*A_n*L_2*dv2 - sind(theta)*rho_h2o*v_2*A_n*(vlin-v_2) - (m_r+rho_h2o*A_b*L_1)*g - sind(theta)*(Cd/2)*rho_air*A_b*vlin*abs(vlin))/(m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
-end
-
-
-if(z < -0.5)
-    vrx = 0;
-    vrz = 0;
-    dvrz = 0;
-    dvrx = 0;
+    dvrx = (cos(theta)*-rho_h2o*A_b*(dL_1*(vlin-v_1)-L_1*dv_1) + cos(theta)*rho_h2o*A_n*L_2*dv2 - cos(theta)*rho_h2o*A_n*(vlin-v_2)*v_2 - cos(theta)*(Cd/2)*rho_air*A_b*aslin^2)/(m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
+    dvrz = (sin(theta)*-rho_h2o*A_b*(dL_1*(vlin-v_1)-L_1*dv_1) + sin(theta)*rho_h2o*A_n*L_2*dv2 - sin(theta)*rho_h2o*A_n*(vlin-v_2)*v_2 - (m_r+rho_h2o*A_b*L_1)*g - sin(theta)*(Cd/2)*rho_air*A_b*aslin^2)/(m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
+    dvry = 0.5*rho_air*Cd_y*(asy)^2*D_b*L_b/(m_r+rho_h2o*A_b*L_1 + rho_h2o*A_n*L_2);
+    dtheta = (asx*dvrz - vrz*dvrx)/(asx^2 + vrz^2);
 end
 
 dx = vrx;
 dz = vrz;
+dy = vry;
 
+%--------------------------------------------------------------------------
+%-------------STATE DERIVATIVES--------------------------------------------
 dq = zeros(length(q),1);
 
 dq(1) = dv_1;
@@ -106,4 +151,9 @@ dq(3) = dvrx;
 dq(4) = dvrz;
 dq(5) = dx;
 dq(6) = dz;
-dq(7) = 0;
+dq(7) = 0;              %initial pressure does not change internally
+dq(8) = dtheta;
+dq(9) = 0;              %initial volume does not change internally
+dq(10) = domega;
+dq(11) = dvry;
+dq(12) = dy;
